@@ -10,6 +10,7 @@ boolean timerStarted = false;
 
 boolean startPressedBefore = false;
 boolean addPressedBefore = false;
+boolean currentMinuteLit = false;
 
 void setup()
 {
@@ -44,17 +45,22 @@ void loop()
 
     if (timerStarted && oneSecondGone()) {
         minutes--;
-        delay(1);
     }
 
     lightMinutes(minutes);
 
     startPressedBefore = startPressed;
     addPressedBefore = addPressed;
+
+    delay(1);
+}
+
+boolean timeGone(int time) {
+    return timer() % time == 0;
 }
 
 boolean oneSecondGone() {
-    return timer() % 1000 == 0;
+    return timeGone(1000);
 }
 
 void startTimer() {
@@ -90,8 +96,17 @@ int cycleMinutes(int minutes) {
 
 void lightMinutes(int minutes) {
     for (int i = 0; i < 5; i++) {
-        if (i <= minutes - 1) {
+        if (i < minutes - 1) {
             digitalWrite(ledPins[i], HIGH);
+        } else if (i == minutes - 1) {
+            if (timerStarted) {
+                if (timeGone(250)) {
+                    digitalWrite(ledPins[i], currentMinuteLit);
+                    currentMinuteLit = ! currentMinuteLit;
+                }
+            } else {
+                digitalWrite(ledPins[i], HIGH);
+            }
         } else {
             digitalWrite(ledPins[i], LOW);
         }
