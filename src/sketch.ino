@@ -30,7 +30,11 @@ void loop()
     }
 
     if (startPressed && ! startPressedBefore) {
-        startTimer();
+        if (timerStarted) {
+            resetTimer();
+        } else {
+            startTimer();
+        }
     }
 
     if (timerStarted && timer() > timerDuration * 1000) {
