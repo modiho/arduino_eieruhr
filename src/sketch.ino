@@ -1,7 +1,8 @@
+#include <LiquidCrystal.h>
+
 const int startPin = 2;
 const int addPin = 3;
-const int buzzPin = 6;
-const int ledPins[5] = { 13, 12, 11, 8, 10 };
+const int buzzPin = 10;
 
 int minutes = 1;
 int timerDuration = minutes;
@@ -10,16 +11,20 @@ boolean timerStarted = false;
 
 boolean startPressedBefore = false;
 boolean addPressedBefore = false;
-boolean currentMinuteLit = false;
+
+LiquidCrystal lcd(12, 11, 4, 5, 6, 7);
+
 
 void setup()
 {
     Serial.begin(9600);
     pinMode(buzzPin, OUTPUT);
-    for (int i = 0; i < 5; i++) {
-        pinMode(ledPins[i], OUTPUT);
-    }
+    lcd.begin(16, 2);
+    setDisplay(String(minutes));
 }
+
+long lastTime = millis();
+long milliseconds = 0;
 
 void loop()
 {
@@ -27,32 +32,46 @@ void loop()
     boolean addPressed = btnPressed(addPin, addPressedBefore);
 
     if (addPressed && ! addPressedBefore && ! timerStarted) {
-        minutes = cycleMinutes(minutes);
+        minutes += 1;
+        setDisplay(String(minutes));
     }
+
+    addPressedBefore = addPressed;
 
     if (startPressed && ! startPressedBefore) {
         if (timerStarted) {
             resetTimer();
         } else {
             startTimer();
+            lastTime = millis();
         }
     }
+    startPressedBefore = startPressed;
 
-    if (timerStarted && timer() > timerDuration * 1000) {
+    long currentTime = millis();
+    if ((currentTime - lastTime) > 1000 && timerStarted) {
+        timerLoop(addPressed, startPressed);
+        lastTime = currentTime;
+    }
+}
+
+void setDisplay(String text) {
+    lcd.home();
+    lcd.clear();
+    lcd.print(text);
+}
+
+void timerLoop(boolean addPressed, boolean startPressed) {
+    Serial.println(String(millis()));
+    minutes--;
+
+    setDisplay(String(minutes));
+
+    if (minutes == 0) {
         buzz();
         resetTimer();
+        setDisplay(String(minutes));
     }
-
-    if (timerStarted && oneSecondGone()) {
-        minutes--;
-    }
-
-    lightMinutes(minutes);
-
-    startPressedBefore = startPressed;
-    addPressedBefore = addPressed;
-
-    delay(1);
 }
 
 boolean timeGone(int time) {
@@ -82,35 +101,6 @@ void buzz() {
     analogWrite(buzzPin, 50);
     delay(1000);
     digitalWrite(buzzPin, LOW);
-}
-
-int cycleMinutes(int minutes) {
-    if (minutes < 5) {
-        minutes += 1;
-    } else {
-        minutes = 1;
-    }
-
-    return minutes;
-}
-
-void lightMinutes(int minutes) {
-    for (int i = 0; i < 5; i++) {
-        if (i < minutes - 1) {
-            digitalWrite(ledPins[i], HIGH);
-        } else if (i == minutes - 1) {
-            if (timerStarted) {
-                if (timeGone(250)) {
-                    digitalWrite(ledPins[i], currentMinuteLit);
-                    currentMinuteLit = ! currentMinuteLit;
-                }
-            } else {
-                digitalWrite(ledPins[i], HIGH);
-            }
-        } else {
-            digitalWrite(ledPins[i], LOW);
-        }
-    }
 }
 
 boolean btnPressed(int pin, boolean pressedBefore) {
